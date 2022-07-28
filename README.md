@@ -29,7 +29,7 @@ From the main menu, you can view all departments, roles, and employees. You can 
 
 ## Demo video
 
-
+https://user-images.githubusercontent.com/5232938/181655252-00544b2e-69fb-4b81-b84d-9573d192f147.mov
 
 
 ## License
