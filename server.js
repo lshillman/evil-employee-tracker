@@ -17,7 +17,8 @@ const db = mysql.createConnection(
         database: process.env.DB_NAME
     }, console.log(`Connected to the employees_db database.`));
 
-
+// The arrays below store values for inquirer prompts. The objects allow the resulting answers to be translated to their database IDs.
+// TODO: refactor this so these variables are not in the global scope. Can't make the functions properly async this way.
 const deptMap = {};
 const deptArray = [];
 
@@ -33,8 +34,6 @@ function getDepts() {
             deptMap[item.name] = item.id;
             deptArray.push(item.name);
         }
-        // console.log(deptMap);
-        // return deptMap;
         return 0;
     });
 }
@@ -48,6 +47,33 @@ function getRoles() {
     });
 }
 
+
+// This is a badly-written attempt to make getEmployees async. Need to come back later and make it work.
+//
+// function getEmployees() {
+//     return new Promise(function (res, rej){
+//         db.query('SELECT * FROM employee', function (err, results) {
+//             for (item of results) {
+//                 let name;
+//                 if (item.last_name) {
+//                     name = item.first_name + " " + item.last_name;
+//                 } else {
+//                     name = item.first_name;
+//                 }
+//                 empMap[name] = item.id;
+//                 empArray.push(name);
+//             }
+//             console.log('getEmployees query complete!');
+//             if (err) {
+//                 return rej(err);
+//             }
+//             return res();
+//         });
+//     })
+// }
+
+
+// this only works because there's one inquirer question before empArray is needed. If the user were a computer, it would fail. Need to refactor.
 function getEmployees() {
     db.query('SELECT * FROM employee', function (err, results) {
         for (item of results) {
@@ -63,6 +89,8 @@ function getEmployees() {
     });
 }
 
+
+
 // Questions for the main menu
 const mainMenuQuestions = [
     {
@@ -73,6 +101,7 @@ const mainMenuQuestions = [
     }
 ];
 
+// Question for adding a department
 const deptQuestions = [
     {
         type: 'input',
@@ -81,6 +110,7 @@ const deptQuestions = [
     }
 ]
 
+// Questions for adding a new role
 const roleQuestions = [
     {
         type: 'input',
@@ -100,7 +130,7 @@ const roleQuestions = [
     }
 ]
 
-
+// Questions for adding a new employee
 const employeeQuestions = [
     {
         type: 'input',
@@ -126,6 +156,7 @@ const employeeQuestions = [
     }
 ]
 
+// Questions for updating an employee's role. The first question needs an array of values that comes from a db query, which is why this code is currently so messy.
 const updateRoleQuestions = [
     {
         type: 'list',
@@ -141,7 +172,7 @@ const updateRoleQuestions = [
     }
 ]
 
-
+// the main menu
 function mainMenu() {
     inquirer
         .prompt(mainMenuQuestions)
@@ -174,6 +205,7 @@ function mainMenu() {
           });
 }
 
+// view all departments
 function viewDepts() {
     db.query('SELECT * FROM department', function (err, results) {
         console.log("\n");
@@ -182,6 +214,7 @@ function viewDepts() {
     });
 }
 
+// view all roles
 function viewRoles() {
     db.query('SELECT role.id, role.title, department.name, role.salary FROM role INNER JOIN department ON department.id = role.department_id ORDER BY role.id ASC', function (err, results) {
         console.log("\n");
@@ -191,6 +224,7 @@ function viewRoles() {
     });
 }
 
+//view all employees
 function viewEmployees() {
     db.query('SELECT e.id, e.first_name, e.last_name, role.title, department.name AS department, role.salary, concat(m.first_name, " ", m.last_name) AS manager FROM employee e JOIN role ON e.role_id = role.id JOIN department ON role.department_id = department.id LEFT JOIN employee m ON m.id = e.manager_id', function (err, results) {
         console.log("\n");
@@ -200,6 +234,7 @@ function viewEmployees() {
     });
 }
 
+// add a department
 function addDept() {
     inquirer
     .prompt(deptQuestions)
@@ -208,10 +243,12 @@ function addDept() {
             if (err) throw err;
             // console.log(results);
         });
+        console.log("\n");
         mainMenu();
       });
 }
 
+// add a role
 function addRole() {
     getDepts();
     inquirer
@@ -227,6 +264,7 @@ function addRole() {
       });
 }
 
+// add an employee
 function addEmployee() {
     empArray = [];
     empArray.push('none');
@@ -246,27 +284,54 @@ function addEmployee() {
       });
 }
 
-function updateEmployee() {
-    empArray = [];
+// the first version of updateEmployee. Possibly can be salvaged after getEmployees works as intended.
+//
+// function updateEmployee() {
+//     empArray = [];
+//     getRoles();
+//     getEmployees().then((data) => {
+//     inquirer
+//     .prompt(updateRoleQuestions)
+//     .then((answers) => {
+//          db.query('UPDATE employee SET role_id = ? WHERE id = ?', [roleMap[answers.role], empMap[answers.employee]], function (err, results) {
+//             if (err) throw err;
+//         });
+//         console.log("\n");
+//         mainMenu();
+//       });
+//     });
+// }
+
+function updateEmployee() { // I'm sorry, this is messy. I couldn't use getEmployees here because it wouldn't finish in time for the first question. I'll come back later and make this properly async.
     getRoles();
-    getEmployees();
-    inquirer
-    .prompt(updateRoleQuestions)
-    .then((answers) => {
-         db.query('UPDATE employee SET role_id = ? WHERE id = ?', [roleMap[answers.role], empMap[answers.employee]], function (err, results) {
-            if (err) throw err;
-        });
-        console.log("\n");
-        mainMenu();
-      });
+    db.query('SELECT * FROM employee', function (err, results) {
+        for (item of results) {
+            let name;
+            if (item.last_name) {
+                name = item.first_name + " " + item.last_name;
+            } else {
+                name = item.first_name;
+            }
+            empMap[name] = item.id;
+            empArray.push(name);
+        }
+        inquirer
+        .prompt(updateRoleQuestions)
+        .then((answers) => {
+             db.query('UPDATE employee SET role_id = ? WHERE id = ?', [roleMap[answers.role], empMap[answers.employee]], function (err, results) {
+                if (err) throw err;
+            });
+            console.log("\n");
+            mainMenu();
+          });
+    });
 }
 
 
-
+// run this on start
 function init() {
     console.clear();
     mainMenu();
-    //getDepts();
 }
 
 init();
