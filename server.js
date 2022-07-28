@@ -33,7 +33,9 @@ function getDepts() {
             deptMap[item.name] = item.id;
             deptArray.push(item.name);
         }
-        console.log(deptArray);
+        // console.log(deptMap);
+        // return deptMap;
+        return 0;
     });
 }
 
@@ -43,7 +45,6 @@ function getRoles() {
             roleMap[item.title] = item.id;
             roleArray.push(item.title);
         }
-        console.log(roleMap);
     });
 }
 
@@ -59,7 +60,6 @@ function getEmployees() {
             empMap[name] = item.id;
             empArray.push(name);
         }
-        console.log(empMap);
     });
 }
 
@@ -69,7 +69,7 @@ const mainMenuQuestions = [
         type: 'list',
         name: 'action',
         message: "Please choose an option:",
-        choices: ["View all departments", "View all roles", "View all employees", "Add a department", "Add a role", "Add an employee", "Quit"]
+        choices: ["View all departments", "View all roles", "View all employees", "Add a department", "Add a role", "Add an employee", "Update an employee role", "Quit"]
     }
 ];
 
@@ -101,6 +101,45 @@ const roleQuestions = [
 ]
 
 
+const employeeQuestions = [
+    {
+        type: 'input',
+        name: 'firstName',
+        message: "Enter employee's first name:"
+    },
+    {
+        type: 'input',
+        name: 'lastName',
+        message: "Enter employee's last name:"
+    },
+    {
+        type: 'list',
+        name: 'role',
+        message: "Select employee's role:",
+        choices: roleArray
+    },
+    {
+        type: 'list',
+        name: 'manager',
+        message: "Select employee's manager:",
+        choices: empArray
+    }
+]
+
+const updateRoleQuestions = [
+    {
+        type: 'list',
+        name: 'employee',
+        message: "Select employee to update:",
+        choices: empArray
+    },
+    {
+        type: 'list',
+        name: 'role',
+        message: "Select new role:",
+        choices: roleArray
+    }
+]
 
 
 function mainMenu() {
@@ -126,6 +165,9 @@ function mainMenu() {
                 case "Add an employee":
                     addEmployee();
                     break;
+                case "Update an employee role":
+                    updateEmployee();
+                    break;
                 case "Quit":
                     process.exit();
             }
@@ -141,7 +183,7 @@ function viewDepts() {
 }
 
 function viewRoles() {
-    db.query('SELECT role.id, role.title, department.name, role.salary FROM role INNER JOIN department ON department.id = role.department_id', function (err, results) {
+    db.query('SELECT role.id, role.title, department.name, role.salary FROM role INNER JOIN department ON department.id = role.department_id ORDER BY role.id ASC', function (err, results) {
         console.log("\n");
         console.log(err);
         console.table(results);
@@ -159,15 +201,72 @@ function viewEmployees() {
 }
 
 function addDept() {
+    inquirer
+    .prompt(deptQuestions)
+    .then((answers) => {
+         db.query('INSERT INTO department (name) VALUES (?)', answers.deptName, function (err, results) {
+            if (err) throw err;
+            // console.log(results);
+        });
+        mainMenu();
+      });
+}
 
+function addRole() {
+    getDepts();
+    inquirer
+    .prompt(roleQuestions)
+    .then((answers) => {
+         db.query('INSERT INTO role (title, salary, department_id) VALUES (?, ?, ?)', [answers.roleName, answers.roleSalary, deptMap[answers.roleDept]], function (err, results) {
+            if (err) throw err;
+            //console.log(results);
+            // console.info("\nSuccessfully added " + answers.roleName + ".\n")
+        });
+        console.log("\n");
+        mainMenu();
+      });
+}
+
+function addEmployee() {
+    empArray = [];
+    empArray.push('none');
+    getRoles();
+    getEmployees();
+    inquirer
+    .prompt(employeeQuestions)
+    .then((answers) => {
+         let manager;
+         if (answers.manager != 'none') {manager = answers.manager}
+         else {manager = null}
+         db.query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?)', [answers.firstName, answers.lastName, roleMap[answers.role], empMap[manager]], function (err, results) {
+            if (err) throw err;
+        });
+        console.log("\n");
+        mainMenu();
+      });
+}
+
+function updateEmployee() {
+    empArray = [];
+    getRoles();
+    getEmployees();
+    inquirer
+    .prompt(updateRoleQuestions)
+    .then((answers) => {
+         db.query('UPDATE employee SET role_id = ? WHERE id = ?', [roleMap[answers.role], empMap[answers.employee]], function (err, results) {
+            if (err) throw err;
+        });
+        console.log("\n");
+        mainMenu();
+      });
 }
 
 
 
 function init() {
     console.clear();
-    getEmployees();
-   // mainMenu();
+    mainMenu();
+    //getDepts();
 }
 
 init();
