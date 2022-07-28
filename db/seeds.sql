@@ -18,5 +18,5 @@ VALUES ("Jean-Luc", "Picard", 1, null),
        ("William", "Riker", 2, 1),
        ("Tasha", "Yar", 3, 2),
        ("Geordi", "LaForge", 4, 2),
-       ("Data", null, 5, 2),
+       ("Data", "", 5, 2),
        ("Beverly", "Crusher", 6, 1);

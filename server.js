@@ -266,7 +266,6 @@ function addRole() {
 
 // add an employee
 function addEmployee() {
-    empArray = [];
     empArray.push('none');
     getRoles();
     getEmployees();
